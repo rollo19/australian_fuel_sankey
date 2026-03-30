@@ -7,11 +7,6 @@ col_title, col_shortfall = st.columns([3, 1])
 with col_title:
     st.title("🇦🇺 Australia Fuel Supply Chain Simulator")
 
-with col_shortfall:
-    st.markdown("<p style='text-align: right; font-size: 14px; margin-top: 28px;'>"
-                "<strong>Shortfall at Storage:</strong> Diesel <span id='ds'></span>%, "
-                "Petrol <span id='ps'></span>%, Av Gas <span id='as'></span>%</p>", 
-                unsafe_allow_html=True)
 
 scenario = st.radio(
     "Select Scenario",
