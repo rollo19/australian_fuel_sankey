@@ -3,31 +3,37 @@ import plotly.graph_objects as go
 
 st.set_page_config(page_title="Australia Fuel Simulator", layout="wide")
 
-# Title row with shortfall on the right
 col_title, col_shortfall = st.columns([3, 1])
-
 with col_title:
     st.title("🇦🇺 Australia Fuel Supply Chain Simulator")
 
-# Scenario selector
+with col_shortfall:
+    st.markdown("<p style='text-align: right; font-size: 14px; margin-top: 28px;'>"
+                "<strong>Shortfall at Storage:</strong> Diesel <span id='ds'></span>%, "
+                "Petrol <span id='ps'></span>%, Av Gas <span id='as'></span>%</p>", 
+                unsafe_allow_html=True)
+
 scenario = st.radio(
     "Select Scenario",
     ["FY25 Business as Normal", 
-     "Hormuz Closed (Bab Open)", 
+     "Hormuz Closed (Bab Open) — Analyst Table", 
      "Hormuz + Bab Closed (Worst Case)"],
     horizontal=True
 )
 
-# Scenario description (no title, just the note)
+# Scenario description (no title)
 if scenario == "FY25 Business as Normal":
-    st.info("Normal operations. Persian Gulf ~12 mbpd, Malaysia ~2.5 mbpd, US+Others ~3 mbpd.")
-elif scenario == "Hormuz Closed (Bab Open)":
-    st.warning("Hormuz largely shut. Persian Gulf drops to ~1.2 mbpd via Yanbu. Asia refiners self-prioritising → Australia receives ~48% of normal volumes.")
+    st.info("Pre-crisis baseline. Persian Gulf ~27 mbpd total crude, Qatar LNG 77 MTPA.")
+elif scenario == "Hormuz Closed (Bab Open) — Analyst Table":
+    st.warning("Based on latest analyst table: Gulf crude supply falls from ~27 mbpd to ~13–15 mbpd. "
+               "Saudi ~7 mbpd pipeline (5 mbpd export), UAE <1.5 mbpd, Iraq/Kuwait heavily curtailed, "
+               "Qatar LNG at zero with 12.8 MTPA destroyed.")
 else:
-    st.error("Hormuz + Bab al-Mandab closed. Persian Gulf almost zero to Asia. Severe supply crisis for Australia.")
+    st.error("Full double chokepoint closure. Persian Gulf supply to Asia near collapse (~0.6–1 mbpd). "
+             "Severe shortfall across all fuels.")
 
 # Refinery toggles
-st.caption("Enable / Disable Refining Sources")
+st.subheader("Enable / Disable Refining Sources")
 cols = st.columns(7)
 with cols[0]: sk = st.checkbox("South Korea", value=True)
 with cols[1]: sg = st.checkbox("Singapore", value=True)
@@ -37,25 +43,21 @@ with cols[4]: cn = st.checkbox("China/Taiwan", value=True)
 with cols[5]: us = st.checkbox("US", value=True)
 with cols[6]: dom = st.checkbox("Domestic Refineries", value=True)
 
-# Main sliders
+# Sliders
 col1, col2 = st.columns(2)
 with col1:
     asia_factor = st.slider("Asia Refinery Output Factor", 0.0, 1.0, 
-                            1.0 if "Normal" in scenario else 0.48 if "Bab Open" in scenario else 0.25, 0.05)
+                            1.0 if "Normal" in scenario else 0.45 if "Bab Open" in scenario else 0.22, 0.05)
 with col2:
     dom_factor = st.slider("Domestic Refinery Output Factor", 0.5, 1.0, 1.0, 0.05)
 
 # Demand response
-st.caption("Demand Response / Rationing (100% = Full Demand)")
+st.subheader("Demand Response / Rationing (100% = Full Demand)")
 colA, colB, colC, colD = st.columns(4)
-with colA:
-    mining_resp = st.slider("Mining", 0.0, 1.0, 1.0, 0.05)
-with colB:
-    transport_resp = st.slider("Transport (Food/Freight)", 0.0, 1.0, 1.0, 0.05)
-with colC:
-    agri_resp = st.slider("Agriculture", 0.0, 1.0, 1.0, 0.05)
-with colD:
-    domestic_resp = st.slider("Domestic", 0.0, 1.0, 1.0, 0.05)
+with colA: mining_resp = st.slider("Mining", 0.0, 1.0, 1.0, 0.05)
+with colB: transport_resp = st.slider("Transport (Food/Freight)", 0.0, 1.0, 0.85, 0.05)
+with colC: agri_resp = st.slider("Agriculture", 0.0, 1.0, 0.90, 0.05)
+with colD: domestic_resp = st.slider("Domestic", 0.0, 1.0, 0.80, 0.05)
 
 # Nodes
 nodes = [
@@ -65,21 +67,22 @@ nodes = [
     "Mining", "Transport", "Agriculture", "Domestic"
 ]
 
-# Links
+# Links (adjusted baseline to better reflect analyst table — lower Asia contribution)
 links = [
-    (0, 7, 0.13), (0, 8, 0.07), (0, 9, 0.03),
-    (1, 7, 0.12), (1, 8, 0.08), (1, 9, 0.02),
-    (2, 7, 0.07), (2, 8, 0.04), (2, 9, 0.01),
-    (3, 7, 0.05), (3, 8, 0.04), (3, 9, 0.01),
-    (4, 7, 0.03), (4, 8, 0.03), (4, 9, 0.02),
-    (5, 7, 0.03), (5, 8, 0.02), (5, 9, 0.01),
-    (6, 7, 0.13), (6, 8, 0.08), (6, 9, 0.02),
+    (0, 7, 0.11), (0, 8, 0.06), (0, 9, 0.02),   # South Korea
+    (1, 7, 0.10), (1, 8, 0.07), (1, 9, 0.02),   # Singapore
+    (2, 7, 0.06), (2, 8, 0.04), (2, 9, 0.01),   # Malaysia
+    (3, 7, 0.04), (3, 8, 0.03), (3, 9, 0.01),   # India
+    (4, 7, 0.03), (4, 8, 0.02), (4, 9, 0.02),   # China/Taiwan
+    (5, 7, 0.03), (5, 8, 0.02), (5, 9, 0.01),   # US
+    (6, 7, 0.13), (6, 8, 0.08), (6, 9, 0.02),   # Domestic
+    # Storage → Demand
     (7, 10, 0.05), (7, 11, 0.25), (7, 12, 0.15), (7, 13, 0.05),
     (8, 10, 0.03), (8, 11, 0.15), (8, 12, 0.03), (8, 13, 0.12),
     (9, 10, 0.01), (9, 11, 0.07), (9, 12, 0.00), (9, 13, 0.00)
 ]
 
-# Apply toggles and factors
+# Apply factors and toggles
 adjusted_links = []
 for s, t, v in links:
     if s == 0 and not sk: continue
@@ -107,7 +110,7 @@ for s, t, v in adjusted_links:
     else:
         final_links.append((s, t, v))
 
-# Calculate shortfall percentages at storage level
+# Calculate shortfall %
 diesel_supply = sum(v for s,t,v in final_links if t == 7)
 petrol_supply = sum(v for s,t,v in final_links if t == 8)
 avgas_supply = sum(v for s,t,v in final_links if t == 9)
@@ -116,13 +119,14 @@ diesel_short = max(0, round((0.42 - diesel_supply) / 0.42 * 100)) if diesel_supp
 petrol_short = max(0, round((0.32 - petrol_supply) / 0.32 * 100)) if petrol_supply < 0.32 else 0
 avgas_short = max(0, round((0.12 - avgas_supply) / 0.12 * 100)) if avgas_supply < 0.12 else 0
 
-# Update shortfall display using markdown
-st.markdown(f"""
-<p style='text-align: right; font-size: 18px; margin-top: -10px;'>
-<strong>Shortfall:</strong> Diesel <strong>{diesel_short}%</strong>, 
-Petrol <strong>{petrol_short}%</strong>, Av Gas <strong>{avgas_short}%</strong>
-</p>
-""", unsafe_allow_html=True)
+# Display shortfall
+with col_shortfall:
+    st.markdown(f"""
+    <p style='text-align: right; font-size: 15px; margin-top: 8px;'>
+    <strong>Shortfall:</strong> Diesel <strong>{diesel_short}%</strong>, 
+    Petrol <strong>{petrol_short}%</strong>, Av Gas <strong>{avgas_short}%</strong>
+    </p>
+    """, unsafe_allow_html=True)
 
 # Link colors
 link_colors = []
@@ -157,7 +161,7 @@ fig = go.Figure(data=[go.Sankey(
 fig.update_layout(
     title=f"Australia Fuel Supply Chain — {scenario}",
     height=720,
-    font=dict(size=15)   # Larger, more readable labels
+    font=dict(size=15)
 )
 
 st.plotly_chart(fig, use_container_width=True)
