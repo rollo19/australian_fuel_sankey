@@ -1,7 +1,7 @@
 import streamlit as st
 import plotly.graph_objects as go
 
-st.set_page_config(page_title="Australia Fuel Simulator", layout="wide")
+st.set_page_config(page_title="Fuel Scenarios Sankey", layout="wide")
 
 col_title, col_shortfall = st.columns([3, 1])
 with col_title:
